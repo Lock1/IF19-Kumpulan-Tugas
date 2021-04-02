@@ -1,0 +1,252 @@
+############################### Inisiasi ###############################
+# External Library
+import pandas
+import openpyxl
+import xlsxwriter
+import hashlib
+
+# Mengload file
+dbase <- read_excel("Database.xlsx", sheet_name <- "Sheet1",converters<-{'NO REK':str,'PIN':str})
+i traversal 0,1,2,...,9:
+    acctoowner[dbase.loc[i, "NO REK"]] <- dbase.loc[i, "PEMILIK"]
+    ibalance.append(dbase.loc[i, "SALDO"])
+    account.append(dbase.loc[i, "NO REK"])
+    pindb.append(dbase.loc[i, "PIN"])
+    owner.append(dbase.loc[i, "PEMILIK"])
+cash.append(int(dbase.loc[0, "ISI MESIN"]))
+#########################################################################
+
+##################### Prosedur memperbarui database #####################
+def updatedatabase():
+    # Inisiasi format writing.
+    book <- xlsxwriter.Workbook('Database.xlsx')        # Membuka Database.xlsx.
+    sheet <- book.add_worksheet("Sheet1")               # Membuka sheet1.
+    sheet.set_column(0, 4, 25)                         # Mengganti ukuran kolom indeks 0 hingga 3, menjadi 25.
+    form <- book.add_format({'align': 'center'})        # Format dasar untuk write.
+    # Menulis baris paling atas dengan PIN SALDO NO REK dan PEMILIK, dengan format text form
+    sheet.write(0, 0, "PIN", form)
+    sheet.write(0, 1, "SALDO", form)
+    sheet.write(0, 2, "NO REK", form)
+    sheet.write(0, 3, "PEMILIK", form)
+    sheet.write(0, 4, "ISI MESIN", form)
+    # Menulis ulang data yang telah disimpan oleh program pada memori
+    i traversal 0,1,2,...,9
+        sheet.write(i + 1, 0, pindb[i], form)          # Semua write dalam strings
+        sheet.write(i + 1, 1, ibalance[i], form)
+        sheet.write(i + 1, 2, account[i], form)
+        sheet.write(i + 1, 3, owner[i])
+    sheet.write(1, 4, cash[0], form)
+    book.close()                                       # Tutup db.xlsx dan keluar
+    return
+#########################################################################
+
+########################## Prosedur output quit ##########################
+def qut(BHS,ty):
+    if BHS = "INDO" then
+        output("SILAHKAN AMBIL KARTU ANDA")
+        if ty = 1 then
+            output("TERIMA KASIH TELAH MENGGUNAKAN ATM BANK BANG")
+    else if BHS = "ENGLISH" then
+        output("PLEASE TAKE YOUR CARD")
+        if ty = 1 then
+            output("THANK YOU FOR USING BANK BANG ATM")
+#########################################################################
+
+########################### Fungsi output uang ###########################
+def prtmn(bal):
+    ln <- len(str(bal))
+    st <- '{:' + str(ln) + ',.0f}'
+    pr <- str(st.format(bal))
+    return pr
+#########################################################################
+
+####################### Prosedur Bahasa Indonesia #######################
+def indo():
+    BHS <- "INDO"
+    balance <- ibalance[idx]
+    internalacc <- accnum
+    i traversal 0,1,2,...
+##### Blok Pengecekan PIN #####
+        correct <- False
+        output("MASUKKAN PIN ATM ANDA")
+        inp <- sha512(salt(input(),internalacc).encode('utf-8')).hexdigest()
+        pin <- pindb[idx]
+        if pin = inp then
+            correct <- True
+        cnt <- 0
+        while not(correct)
+            output("PIN SALAH")
+            cnt <- cnt + 1
+            if cnt = 3 then
+                output("ANDA TELAH MEMASUKKAN PIN YANG SALAH SEBANYAK 3 KALI.")
+                qut(BHS,0)
+                return
+            output("ANDA MEMILIKI", 3 - cnt, "KESEMPATAN LAGI UNTUK MEMASUKKAN PIN ANDA")
+            output("MASUKKAN PIN ATM ANDA")
+            inp <- sha512(salt(input(),internalacc).encode('utf-8')).hexdigest()
+            if pin = inp then
+                correct <- True
+#####***************************************************************#####
+        output("PILIH JENIS TRANSAKSI")
+        output("TEKAN BATAL UNTUK MEMBATALKAN TRANSAKSI")
+        output("1. TRANSFER")
+        output("2. PENARIKAN TUNAI")
+        output("3. INFO SALDO")
+        output("4. UBAH PIN")
+        trans <- input()
+# Jika user memilih menu transfer uang.
+        if trans = 1 then
+            i traversal 0,1,2,...
+                output("MASUKKAN NO. REKENING YANG DITUJU")
+                dacc <- input()
+                eacc <- sha512(dacc.encode('utf-8')).hexdigest()
+                output("APAKAH NO. REKENING PENERIMA SUDAH BENAR")
+                output("1. BENAR")
+                output("2. ULANGI")
+                temp <- input()
+                if temp = 2 then
+                    continue
+                else if eacc = accnum then
+                    output("NO. REKENING TIDAK VALID")
+                    continue
+                else if temp = 1 then
+                    try:
+                        acctoowner[eacc]
+                    except KeyError then
+                        output("NO. REKENING TIDAK DITEMUKAN")
+                        continue
+                    break
+            output("MASUKKAN JUMLAH UANG YANG AKAN DITRANSFER")
+            money <- input()
+            if money > balance then
+                output("MAAF, SALDO ANDA TIDAK MENCUKUPI UNTUK TRANSAKSI INI")
+                qut(BHS,0)
+                return
+            else:
+                output("ANDA AKAN MENTRANSFER UANG SEBESAR RP" + prtmn(money), "PADA REKENING BERIKUT:")
+                output("NO REK :", dacc)
+                output("NAMA :", acctoowner[eacc])
+                output("APAKAH ANDA YAKIN UNTUK MELAKUKAN TRANSAKSI INI?")
+                output("1. YA")
+                output("2. TIDAK")
+                respon <- input()
+                if respon = 1 then
+                    balance <- balance - money
+                    i traversal 0,1,2,...,9
+                        if account[i] = eacc then
+                            ibalance[i] <- money
+                            ibalance[idx] <- balance
+                    updatedatabase()
+                    output("TRANSAKSI BERHASIL")
+                    output("SALDO ANDA")
+                    output("RP" + prtmn(balance),"\n")
+                    qut(BHS,1)
+                else:
+                    output("TRANSAKSI DIBATALKAN")
+                    qut(BHS,0)
+                return
+# Jika user memilih penarikan uang.
+        else if trans = 2 then
+            i traversal 0,1,2,...
+                output("MASUKKAN JUMLAH PENARIKAN TUNAI YANG ANDA AKAN INGINKAN")
+                output("(DALAM KELIPATAN RP50,000)")
+                output("MAKSIMAL RP1,500,000")
+                money <- input()
+                if cash[0] < money then
+                    output("MAAF, UANG DALAM MESIN TIDAK MENCUKUPI UNTUK PENARIKAN SEJUMLAH INI")
+                    qut(BHS,0)
+                if(money % 50000 = 0 and money <= 1500000):
+                    if money <= balance then
+                        break
+                    else if money > balance then
+                        output("MAAF, SALDO ANDA TIDAK MENCUKUPI UNTUK PENARIKAN SEJUMLAH INI")
+                        qut(BHS,0)
+                        return
+                else:
+                    output("JUMLAH TIDAK VALID\n\n")
+            balance <- money
+            ibalance[idx] <- balance
+            cash[0] <- money
+            updatedatabase()
+            output("SILAKAN AMBIL UANG ANDA")
+            qut(BHS,1)
+            return
+# Jika user memilih cek saldo.
+        else if trans = 3 then
+            output("SALDO REKENING ANDA")
+            output("RP" + prtmn(balance))
+            output("\n")
+            output("TRANSAKSI LAGI?")
+            output("1. YA")
+            output("2. TIDAK")
+            ans <- input()
+            if ans = 1 then
+                continue
+            else:
+                qut(BHS,1)
+                return
+# Jika user memilih mengganti pin.
+        else if trans = 4 then
+            i traversal 0,1,2,...
+                output("MASUKKAN PIN BARU UNTUK REKENING ANDA")
+                output("(PIN TERDIRI DARI 6 ANGKA)")
+                inpnew1 <- input()
+                newpin <- sha512(salt(inpnew1,internalacc).encode('utf-8')).hexdigest()
+                if len(inpnew1) !<- 6 then
+                    output("PIN TIDAK VALID")
+                    output("\n")
+                    continue
+                else:
+                    output("KONFIRMASI PIN BARU ANDA")
+                    cfmpin <- sha512(salt(input(),internalacc).encode('utf-8')).hexdigest()
+                    if cfmpin = newpin then
+                        break
+                    else:
+                        output("PIN TIDAK COCOK")
+                        continue
+            pindb[idx] <- newpin
+            updatedatabase()
+            output("PIN ANDA BERHASIL DIUBAH")
+            output("TRANSAKSI LAGI?")
+            output("1. YA")
+            output("2. TIDAK")
+            ans <- input()
+            if ans = 1 then
+                continue
+            else:
+                qut(BHS,1)
+                return
+#########################################################################
+
+############################# Main function #############################
+output("SELAMAT DATANG DI ATM BANK BANG")
+output("WELCOME TO BANK BANG ATM")
+output("\n")
+output("\n")
+output("\n")
+output("MASUKKAN KARTU ATM ANDA")
+output("INSERT YOUR ATM CARD")
+accnum <- sha512(input().encode('utf-8')).hexdigest()
+i traversal 0,1,2,...,9
+    if (accnum = account[i]) then
+        idx <- i
+if idx = -1 then
+    exit()
+i traversal 0,1,2,...,24
+    output("\n")
+# Loop utama
+i traversal 0,1,2,....
+    output("PILIH BAHASA")
+    output("LANGUAGE PREFERENCE")
+    output("1. INDONESIA")
+    output("2. ENGLISH")
+    l <- input()
+    if l = 1 then
+        indo()
+        break
+    else if l = 2 then
+        english()
+        break
+    else:
+        output("Kau ni ngerti angka tak?")
+#########################################################################
