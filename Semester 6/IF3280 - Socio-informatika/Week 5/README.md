@@ -1,0 +1,1 @@
+Tugas Socif : Resume buku motivasi

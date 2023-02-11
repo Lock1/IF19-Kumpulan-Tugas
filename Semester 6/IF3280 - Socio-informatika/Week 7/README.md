@@ -1,0 +1,1 @@
+Tugas Socif : Application letter ditujukan ke HR suatu perusahaan

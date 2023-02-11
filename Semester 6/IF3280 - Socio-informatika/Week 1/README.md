@@ -1,0 +1,1 @@
+Tugas 1 Socif : Cerita diri sendiri, no upload thx
